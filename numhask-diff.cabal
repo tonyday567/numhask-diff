@@ -1,0 +1,50 @@
+cabal-version: 3.0
+name: numhask-diff
+version: 0.1.0.0
+license: BSD-3-Clause
+license-file: LICENSE
+copyright: Tony Day (c) 2025
+category: math
+author: Tony Day
+maintainer: tonyday567@gmail.com
+homepage: https://github.com/tonyday567/numhask-diff#readme
+bug-reports: https://github.com/tonyday567/numhask-diff/issues
+synopsis: Reverse-mode automatic differentiation carrier for NumHask.
+description:
+  numhask-diff provides the 'Diff' carrier: a smooth function bundled with
+  its pullback, with NumHask instances turning NumHask-polymorphic code
+  into differentiable code.  This is the functorial-lift direction of the
+  NumHask ecosystem, separated from the free term algebras that live in
+  numhask proper.
+
+build-type: Simple
+tested-with:
+  ghc ==9.12.2
+  ghc ==9.14.1
+
+extra-doc-files:
+  ChangeLog.md
+  readme.md
+
+source-repository head
+  type: git
+  location: https://github.com/tonyday567/numhask-diff
+
+common ghc-options-stanza
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+
+library
+  import: ghc-options-stanza
+  default-language: GHC2024
+  hs-source-dirs: src
+  build-depends:
+    base >=4.18 && <5,
+    numhask >=0.14 && <0.15,
+  exposed-modules:
+    NumHask.Diff
+  default-extensions: RebindableSyntax
