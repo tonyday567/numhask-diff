@@ -46,5 +46,18 @@ library
     base >=4.18 && <5,
     numhask >=0.14 && <0.15,
   exposed-modules:
-    NumHask.Diff
+    NumHask.Diff,
+    NumHask.Diff.Inverse,
+    NumHask.Diff.Jet
   default-extensions: RebindableSyntax
+
+test-suite spec
+  import: ghc-options-stanza
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  hs-source-dirs: test
+  build-depends:
+    base >=4.18 && <5,
+    numhask >=0.14 && <0.15,
+    numhask-diff,
+  default-language: GHC2024
