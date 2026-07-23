@@ -47,6 +47,7 @@ library
     numhask >=0.14 && <0.15,
   exposed-modules:
     NumHask.Diff,
+    NumHask.Diff.Curvature,
     NumHask.Diff.Inverse,
     NumHask.Diff.Jet
   default-extensions: RebindableSyntax

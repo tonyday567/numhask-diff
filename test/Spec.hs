@@ -4,6 +4,7 @@ import NumHask.Algebra.Field qualified as NHField
 import NumHask.Algebra.Additive (Additive (..), Subtractive (..))
 import NumHask.Algebra.Multiplicative (Multiplicative (..))
 import NumHask.Diff (Diff')
+import NumHask.Diff.Curvature (surfaceOfRevolutionK)
 import NumHask.Diff.Inverse (constDiff, implicit1N, inverseN, varDiff)
 import NumHask.Diff.Jet (taylor)
 import System.Exit (exitFailure)
@@ -72,3 +73,10 @@ main = do
         root = implicit1N g y0 10
         expected = P.sqrt (1.0 P.- xVal P.* xVal)
      in abs (root P.- expected) < 1e-12
+
+  putStrLn "Curvature oracle tests"
+
+  assert "S² Gaussian curvature = 1" $
+    let profile z = NHField.sqrt (one - z * z)
+        k = surfaceOfRevolutionK profile (0.0 :: Double)
+     in abs (k P.- 1.0) < 1e-10

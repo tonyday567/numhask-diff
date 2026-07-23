@@ -64,6 +64,14 @@ align (Jet xs) (Jet ys) =
   let n = P.min (P.length xs) (P.length ys)
    in (P.take n xs, P.take n ys)
 
+-- | Align two jets, lifting a length-1 (constant) jet to the order of the
+-- other by padding with zeros.  This makes @one@, @zero@ and numeric literals
+-- behave as scalars of arbitrary order.
+alignLift :: (Additive a) => Jet a -> Jet a -> ([a], [a])
+alignLift (Jet [x]) (Jet ys) = (x : P.replicate (P.length ys - 1) zero, ys)
+alignLift (Jet xs) (Jet [y]) = (xs, y : P.replicate (P.length xs - 1) zero)
+alignLift (Jet xs) (Jet ys) = align (Jet xs) (Jet ys)
+
 -- | Build a jet of order @n@ representing the input variable @a + h@.
 variable :: (Additive a, Multiplicative a) => Int -> a -> Jet a
 variable n a = Jet (a : one : P.replicate (n P.- 1) zero)
@@ -106,17 +114,19 @@ taylor f n a = taylorDers (f (variable n a))
 instance (Additive a) => Additive (Jet a) where
   zero = Jet [zero]
   Jet xs + Jet ys =
-    let (xs', ys') = align (Jet xs) (Jet ys)
+    let (xs', ys') = alignLift (Jet xs) (Jet ys)
      in Jet (P.zipWith (+) xs' ys')
 
 instance (Subtractive a) => Subtractive (Jet a) where
   negate (Jet xs) = Jet (P.map negate xs)
   Jet xs - Jet ys =
-    let (xs', ys') = align (Jet xs) (Jet ys)
+    let (xs', ys') = alignLift (Jet xs) (Jet ys)
      in Jet (P.zipWith (-) xs' ys')
 
 instance (Additive a, Multiplicative a) => Multiplicative (Jet a) where
   one = Jet [one]
+  Jet [c] * Jet ys = Jet (P.map (c *) ys)
+  Jet xs * Jet [c] = Jet (P.map (* c) xs)
   Jet xs * Jet ys =
     let n = P.min (P.length xs) (P.length ys)
         cauchy k = sum [xs P.!! i * ys P.!! (k - i) | i <- [0 .. k]]
@@ -193,6 +203,26 @@ sinCosSeries u0 us =
       (ss, cs) = P.unzip pairs
    in (Jet ss, Jet cs)
 
+-- | Square-root series via coefficient matching.
+--
+-- If @u = v²@ with @u = u0 + u1*h + ...@ and @v = v0 + v1*h + ...@ then
+-- @v0 = sqrt(u0)@ and @vk = (uk - sum_{i=1}^{k-1} vi v{k-i}) / (2 v0)@.
+sqrtSeries ::
+  (ExpField a) =>
+  [a] ->
+  [a]
+sqrtSeries [] = []
+sqrtSeries (u0 : us) =
+  let v0 = sqrt u0
+      twoV0 = v0 + v0
+      n = P.length us
+      vs = P.map go [0 .. n]
+      go 0 = v0
+      go k =
+        let inner = sum [vs P.!! i * vs P.!! (k - i) | i <- [1 .. k - 1]]
+         in (us P.!! (k - 1) - inner) / twoV0
+   in vs
+
 instance (FromInteger a) => FromInteger (Jet a) where
   fromInteger n = Jet [fromInteger n]
 
@@ -212,6 +242,9 @@ instance (Subtractive a, Divisive a, ExpField a, FromInteger a) => ExpField (Jet
   log (Jet (u0 : us)) =
     let u = Jet (u0 : us)
      in integrate (log u0) (differentiate u / u)
+
+  sqrt (Jet []) = Jet []
+  sqrt (Jet xs) = Jet (P.take (P.length xs) (sqrtSeries xs))
 
 instance (Subtractive a, Divisive a, ExpField a, TrigField a, FromInteger a) => TrigField (Jet a) where
   pi = Jet [pi]
