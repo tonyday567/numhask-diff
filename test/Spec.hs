@@ -1,5 +1,6 @@
 module Main (main) where
 
+import NumHask.Algebra.Field (ExpField, TrigField)
 import NumHask.Algebra.Field qualified as NHField
 import NumHask.Algebra.Additive (Additive (..), Subtractive (..))
 import NumHask.Algebra.Multiplicative (Multiplicative (..))
@@ -11,8 +12,10 @@ import NumHask.Diff.RDC
   ( rdcAdditive,
     rdcChain,
     rdcFst,
+    rdcHomogeneous,
     rdcIdentity,
     rdcLinear,
+    rdcMixedPartials,
     rdcPairing,
     rdcSnd,
     rdcTerminal,
@@ -94,6 +97,9 @@ main = do
   assert "RD.2: rdc is linear in cotangent" $
     rdcLinear eps (NHField.exp x) (1.0 :: Double) 0.3 0.5 0.7
 
+  assert "RD.6: rdc is homogeneous in cotangent" $
+    rdcHomogeneous eps (NHField.exp x) (1.0 :: Double) 0.5 3.0
+
   assert "RD.3: rdc of identity" $
     rdcIdentity eps (2.0 :: Double) 1.0
 
@@ -120,6 +126,11 @@ main = do
     let f = x * x
         g = NHField.exp varDiff
      in rdcChain eps f g (2.0 :: Double) 1.0
+
+  assert "RD.7: symmetry of mixed partials" $
+    let f :: (ExpField a, TrigField a) => (a, a) -> a
+        f (u, v) = u * u * v + NHField.sin (u * v)
+     in rdcMixedPartials eps f (0.7 :: Double, 1.2 :: Double)
 
   putStrLn "Curvature oracle tests"
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -16,10 +17,9 @@
 -- > R[f](a, db) = snd (runDiff f a) db
 --
 -- This module exposes that combinator, the small Cartesian plumbing needed to
--- state the axioms, and value-level checks for [RD.1]–[RD.5].  Axioms [RD.6]
--- and [RD.7] involve second-order structure (linearity of @R[f]@ in its
--- cotangent argument and symmetry of mixed partials) and are left for a
--- nested-'Diff'' / jet follow-up.
+-- state the axioms, and value-level checks for all seven axioms.  [RD.6] is
+-- homogeneity of @R[f]@ in its cotangent argument; [RD.7] is symmetry of mixed
+-- partials (Schwarz), checked via the scalar-line 'Jet' tower.
 module NumHask.Diff.RDC
   ( -- * Reverse derivative combinator
     rdc,
@@ -31,22 +31,28 @@ module NumHask.Diff.RDC
     forkD,
     terminalD,
 
-    -- * Axiom checks ([RD.1]–[RD.5])
+    -- * Axiom checks ([RD.1]–[RD.7])
     rdcAdditive,
     rdcLinear,
+    rdcHomogeneous,
     rdcIdentity,
     rdcFst,
     rdcSnd,
     rdcPairing,
     rdcTerminal,
     rdcChain,
+    rdcMixedPartials,
   )
 where
 
 import Control.Category
 import NumHask.Algebra.Additive (Additive (..))
+import NumHask.Algebra.Field (ExpField (..), TrigField (..))
+import NumHask.Algebra.Multiplicative (Multiplicative (..))
+import NumHask.Data.Integral (FromInteger (..))
 import NumHask.Diff (Diff', data Diff, runDiff)
-import Prelude hiding (id, (.), (+))
+import NumHask.Diff.Jet (constant, taylor)
+import Prelude hiding (fromInteger, id, (*), (.), (+))
 import Prelude qualified as P
 
 -- | Reverse derivative combinator.
@@ -202,3 +208,43 @@ rdcChain tol f g a dc =
   let lhs = rdc (g . f) (a, dc)
       rhs = rdc f (a, rdc g (fst (runDiff f a), dc))
    in near tol lhs rhs
+
+-- | [RD.6] The reverse derivative is homogeneous in its cotangent argument:
+-- @R[f](a, c · db) = c · R[f](a, db)@.
+--
+-- This formulation restricts to endomorphisms @f : A → A@ so that the scalar
+-- @c@ and the input/output cotangents all live in the same carrier.
+rdcHomogeneous ::
+  (Multiplicative a, P.Fractional a, P.Ord a) =>
+  a ->
+  Diff' p a a ->
+  a ->
+  a ->
+  a ->
+  Bool
+rdcHomogeneous tol f a db c =
+  near tol (rdc f (a, c * db)) (c * rdc f (a, db))
+
+-- | [RD.7] Symmetry of mixed partials (Schwarz's theorem).
+--
+-- For a scalar field @f : A × A → A@ we compute the two second-order scalar
+-- jets obtained by differentiating first with respect to @x@ and then @y@, and
+-- vice-versa, and assert they agree.
+--
+-- The function argument is rank-2 polymorphic so it can be interpreted both at
+-- the base carrier @a@ and at the 'Jet' carrier used for the scalar-line Taylor
+-- expansion.
+rdcMixedPartials ::
+  (ExpField a, TrigField a, FromInteger a, P.Fractional a, P.Ord a) =>
+  a ->
+  (forall b. (ExpField b, TrigField b, FromInteger b) => (b, b) -> b) ->
+  (a, a) ->
+  Bool
+rdcMixedPartials tol f (x0, y0) =
+  let x0J = constant 0 x0
+      y0J = constant 0 y0
+      dx y = taylor (\x -> f (x, constant 0 y)) 1 x0J !! 1
+      dy x = taylor (\y -> f (constant 0 x, y)) 1 y0J !! 1
+      dxy = taylor dx 1 y0 !! 1
+      dyx = taylor dy 1 x0 !! 1
+   in near tol dxy dyx
