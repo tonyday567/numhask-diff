@@ -7,6 +7,16 @@ import NumHask.Diff (Diff')
 import NumHask.Diff.Curvature (surfaceOfRevolutionK)
 import NumHask.Diff.Inverse (constDiff, implicit1N, inverseN, varDiff)
 import NumHask.Diff.Jet (taylor)
+import NumHask.Diff.RDC
+  ( rdcAdditive,
+    rdcChain,
+    rdcFst,
+    rdcIdentity,
+    rdcLinear,
+    rdcPairing,
+    rdcSnd,
+    rdcTerminal,
+  )
 import System.Exit (exitFailure)
 import Prelude hiding ((*), (+), (-), (/))
 import Prelude qualified as P
@@ -73,6 +83,43 @@ main = do
         root = implicit1N g y0 10
         expected = P.sqrt (1.0 P.- xVal P.* xVal)
      in abs (root P.- expected) < 1e-12
+
+  putStrLn "RDC axiom tests"
+
+  assert "RD.1: rdc preserves addition" $
+    let f = NHField.exp x
+        g = NHField.sin x
+     in rdcAdditive eps f g (1.0 :: Double) 1.0 1.0
+
+  assert "RD.2: rdc is linear in cotangent" $
+    rdcLinear eps (NHField.exp x) (1.0 :: Double) 0.3 0.5 0.7
+
+  assert "RD.3: rdc of identity" $
+    rdcIdentity eps (2.0 :: Double) 1.0
+
+  assert "RD.3: rdc of fst projection" $
+    rdcFst eps ((2.0 :: Double), (3.0 :: Double)) 1.0
+
+  assert "RD.3: rdc of snd projection" $
+    rdcSnd eps ((2.0 :: Double), (3.0 :: Double)) 1.0
+
+  assert "RD.4: rdc of pairing" $
+    let f = NHField.exp x
+        g = NHField.sin x
+     in rdcPairing eps f g (1.0 :: Double) (0.5, 0.7) (0.2, 0.3)
+
+  assert "RD.4: rdc of terminal morphism" $
+    rdcTerminal eps (2.0 :: Double)
+
+  assert "RD.5: reverse chain rule" $
+    let f = NHField.sin x
+        g = NHField.exp (varDiff :: Diff' p Double Double)
+     in rdcChain eps f g (1.0 :: Double) 1.0
+
+  assert "RD.5: reverse chain rule on polynomial composition" $
+    let f = x * x
+        g = NHField.exp varDiff
+     in rdcChain eps f g (2.0 :: Double) 1.0
 
   putStrLn "Curvature oracle tests"
 
