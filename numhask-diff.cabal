@@ -53,11 +53,10 @@ library
     NumHask.Diff.RDC
   default-extensions: RebindableSyntax
 
-test-suite spec
+executable numhask-diff-verify
   import: ghc-options-stanza
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  hs-source-dirs: test
+  main-is: verify.hs
+  hs-source-dirs: app
   build-depends:
     base >=4.18 && <5,
     numhask >=0.14 && <0.15,
